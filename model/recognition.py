@@ -1,5 +1,6 @@
 import easyocr
 import logging
+import pandas as pd
 
 
 class Recognise(easyocr.Reader):
@@ -10,6 +11,7 @@ class Recognise(easyocr.Reader):
             lang_list=["ru"],
             gpu=True,
         )
+        self.categories = pd.read_csv("categories.csv")
 
     class NoSocialError(Exception):
         def __init__(self) -> None:
@@ -52,12 +54,19 @@ class Recognise(easyocr.Reader):
 
         output_price = self.price_calc(results)
 
+        category = self.categories.loc[self.categories["category"].astype(str).str.contains(output_name)]
+        if category.empty:
+            item_category = ""
+        else:
+            item_category = category.iloc[0]
+
         self.logger.info("Ценник успешно распознан")
 
         return {
             "itemName": output_name,
             "itemPrice": output_price,
-            "confidencePercent": round(confidence_percent / len(results), 2)
+            "confidencePercent": round(confidence_percent / len(results), 2),
+            "category": item_category
         }
 
     def price_calc(self, recognised_data: list[dict]):
@@ -66,7 +75,11 @@ class Recognise(easyocr.Reader):
         recognised_data = [i for i in recognised_data if i["prob"] > 0.8]
 
         for data in recognised_data:
-            if (" ру" in " " + data["text"] + " " or " руб" in " " + data["text"] + " ") and data["prob"] > 0.9:
+            if (
+                    " ру" in " " + data["text"] + " " or
+                    " руб" in " " + data["text"] + " " or
+                    " руе" in " " + data["text"] + " "
+            ) and data["prob"] > 0.9:
                 index = recognised_data.index(data)
 
         probably_price = recognised_data[index - 1]

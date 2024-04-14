@@ -33,6 +33,7 @@ class PriceTagRecognised(BaseModel):
     itemName: str
     itemPrice: float
     confidencePercent: float
+    category: str
 
 
 class Model(BaseModel):
